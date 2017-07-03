@@ -1,57 +1,57 @@
 package com.matteoveroni;
 
-import java.util.Properties;
-import javax.mail.Message;
+import java.io.File;
+import java.io.InputStreamReader;
 import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 
 /**
  * @author: Matteo Veroni
  */
 public class EmailSender {
 
+    private static final MailServer MAIL_SERVER = new MailServer();
+
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
 
-        String HOST = "smtp.gmail.com";
-        String PORT = "587";
-        String USER = "infoeinternetstaff@gmail.com";
-        String PASS = "password";
+        String path;
 
-        String SOURCE_MAIL_ADDRESS = USER;
-        String DESTINATION_MAIL_ADDRESS = "matver87@gmail.com";
-
-        Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", HOST);
-        props.put("mail.smtp.port", PORT);
-
-        Session session = Session.getInstance(props, new javax.mail.Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(USER, PASS);
+        if (args.length == 1) {
+            path = args[0];
+            
+            File emailBody = new File(path);
+            if(emailBody.isFile()){
+                
+                
+                Reader ir = new InputStreamReader();
+                
+                sendMessage("a@b.it", "Title123", emailBody);
+            }else{
+                throw new RuntimeException("Invalid html passed as email body");
             }
-        });
+            
+            sendMessage();
+        } else {
+            sendTestMessage();
+        }
 
+    }
+
+    private static void sendTestMessage() {
+        String destinationAddress = "matver87@gmail.com";
+        String title = "Title";
+        String message = "<html><body><h1>Testo</h1><p>provolona3</p></body></html>";
+        sendMessage(destinationAddress, title, message);
+    }
+
+    private static void sendMessage(String destinationAddress, String title, String message) {
         try {
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress("mamam"));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(DESTINATION_MAIL_ADDRESS));
-            message.setSubject("Titolo");
-            message.setContent("<html><body><h1>Testo</h1><p>provolona3</p></body></html>", "text/html; charset=utf-8");
-            Transport.send(message);
-
-            System.out.println("The email is being sent!");
+            MAIL_SERVER.sendEmail(destinationAddress, title, message);
+            System.out.println("Email sent");
         } catch (MessagingException e) {
             e.printStackTrace();
         }
     }
-
 }
