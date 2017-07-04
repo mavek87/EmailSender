@@ -8,45 +8,85 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import javax.mail.MessagingException;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 /**
  * @author: Matteo Veroni
+ *
+ * http://commons.apache.org/proper/commons-cli/usage.html
+ *
  */
 public class EmailSender {
 
     private static MailServer MAIL_SERVER;
     private static final DAO DATA = new DAO();
 
+    private static final String OPTION_ABBR_TITLE = "t";
+    private static final String OPTION_ABBR_BODY = "b";
+    private static final String OPTION_ABBR_BODY_FROM_FILE = "f";
+    private static final String OPTION_ABBR_PASSWORD = "p";
+
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        String pwd = requestPasswordFromConsole();
 
-        if (pwd.trim().isEmpty()) {
-            MAIL_SERVER = new MailServer();
-        } else {
-            MAIL_SERVER = new MailServer(pwd);
-        }
+        String emailTitle;
+        String emailBody;
 
-        if (args.length == 1) {
+        Options cmdOptions = buildCommandLineOptions();
+        CommandLineParser cmdParser = new DefaultParser();
+        try {
+            CommandLine cmd = cmdParser.parse(cmdOptions, args);
+            emailTitle = cmd.getOptionValue(OPTION_ABBR_TITLE);
+            emailBody = cmd.getOptionValue(OPTION_ABBR_BODY);
 
-            String path = args[0];
-            File file = new File(path);
             try {
-                if (file.isFile()) {
-                    String emailBodyHtml = readFile(path, Charset.forName("UTF-8"));
-                    sendMessage("Title123", emailBodyHtml);
-                } else {
-                    throw new RuntimeException("File " + file + " doesn\'t exist");
+                if (new File(emailBody).isFile()) {
+                    emailBody = readFile(emailBody, Charset.forName("UTF-8"));
                 }
             } catch (IOException ex) {
                 throw new RuntimeException("Error reading file " + ex);
             }
 
-        } else {
-            sendTestMessage();
+            if (cmd.hasOption(OPTION_ABBR_PASSWORD)) {
+                String pwd = requestPasswordFromConsole();
+                MAIL_SERVER = new MailServer(pwd);
+            } else {
+                MAIL_SERVER = new MailServer();
+            }
+
+            sendMessage(emailTitle, emailBody);
+
+        } catch (RuntimeException | ParseException ex) {
+            ex.printStackTrace();
         }
+    }
+
+    private static Options buildCommandLineOptions() {
+        Options options = new Options();
+        Option optionTitle = Option.builder(OPTION_ABBR_TITLE)
+                .required()
+                .hasArg()
+                .desc("set email title")
+                .build();
+        Option optionBody = Option.builder(OPTION_ABBR_BODY)
+                .required()
+                .hasArg()
+                .desc("set email body")
+                .build();
+        Option optionPassword = Option.builder(OPTION_ABBR_PASSWORD)
+                .desc("set email password")
+                .build();
+        options.addOption(optionTitle);
+        options.addOption(optionBody);
+        options.addOption(optionPassword);
+        return options;
     }
 
     private static String requestPasswordFromConsole() {
