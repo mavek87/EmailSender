@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import javax.mail.MessagingException;
 
 /**
@@ -14,6 +15,7 @@ import javax.mail.MessagingException;
 public class EmailSender {
 
     private static MailServer MAIL_SERVER;
+    private static final DAO DATA = new DAO();
 
     /**
      * @param args the command line arguments
@@ -34,7 +36,7 @@ public class EmailSender {
             try {
                 if (file.isFile()) {
                     String emailBodyHtml = readFile(path, Charset.forName("UTF-8"));
-                    sendMessage("matver87@gmail.com", "Title123", emailBodyHtml);
+                    sendMessage("Title123", emailBodyHtml);
                 } else {
                     throw new RuntimeException("File " + file + " doesn\'t exist");
                 }
@@ -66,18 +68,23 @@ public class EmailSender {
         return new String(encoded, encoding);
     }
 
-    private static void sendMessage(String destinationAddress, String title, String message) {
-        try {
-            MAIL_SERVER.sendEmail(destinationAddress, title, message);
-        } catch (MessagingException e) {
-            e.printStackTrace();
+    private static void sendMessage(String title, String message) {
+        Iterator<String> destAddressesIterator = DATA.getAddressesIterator();
+
+        while (destAddressesIterator.hasNext()) {
+            String destinationAddress = destAddressesIterator.next();
+            System.out.println("\ndestination address: " + destinationAddress);
+            try {
+                MAIL_SERVER.sendEmail(destinationAddress, title, message);
+            } catch (MessagingException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private static void sendTestMessage() {
-        String destinationAddress = "matver87@gmail.com";
         String title = "Title";
         String message = "<html><body><h1>Testo</h1><p>provolona3</p></body></html>";
-        sendMessage(destinationAddress, title, message);
+        sendMessage(title, message);
     }
 }
