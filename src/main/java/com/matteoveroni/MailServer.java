@@ -18,12 +18,27 @@ public class MailServer {
     private final static String HOST = "smtp.gmail.com";
     private final static String PORT = "587";
 
-    private final static String USER = "infoeinternetstaff@gmail.com";
-    private final static String PASS = "password";
+    private String username = "infoeinternetstaff@gmail.com";
+    private String password = "password";
 
-    private final Session session;
+    private Session session;
 
     public MailServer() {
+        initMailServer();
+    }
+
+    public MailServer(String password) {
+        this.password = password;
+        initMailServer();
+    }
+
+    public MailServer(String username, String password) {
+        this.username = username;
+        this.password = password;
+        initMailServer();
+    }
+
+    private void initMailServer() {
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
@@ -33,14 +48,14 @@ public class MailServer {
         session = Session.getInstance(props, new javax.mail.Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(USER, PASS);
+                return new PasswordAuthentication(username, password);
             }
         });
     }
 
     public void sendEmail(String destinationAddress, String title, String body) throws MessagingException {
         Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(USER));
+        message.setFrom(new InternetAddress(username));
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(destinationAddress));
         message.setSubject(title);
         message.setContent(body, "text/html; charset=utf-8");
