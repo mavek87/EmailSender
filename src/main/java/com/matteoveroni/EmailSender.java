@@ -7,6 +7,10 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -24,11 +28,10 @@ import org.apache.commons.cli.ParseException;
 public class EmailSender {
 
     private static MailServer MAIL_SERVER;
-    private static final DAO DATA = new DAO();
+    private static final DAO EMAILS = new DAO();
 
     private static final String OPTION_ABBR_TITLE = "t";
     private static final String OPTION_ABBR_BODY = "b";
-    private static final String OPTION_ABBR_BODY_FROM_FILE = "f";
     private static final String OPTION_ABBR_PASSWORD = "p";
 
     /**
@@ -61,7 +64,11 @@ public class EmailSender {
                 MAIL_SERVER = new MailServer();
             }
 
+//            if (MAIL_SERVER.isConnected()) {
             sendMessage(emailTitle, emailBody);
+//            } else {
+//                System.out.println("Authentication to SMTP server failed.");
+//            }
 
         } catch (RuntimeException | ParseException ex) {
             ex.printStackTrace();
@@ -109,17 +116,23 @@ public class EmailSender {
     }
 
     private static void sendMessage(String title, String message) {
-        Iterator<String> destAddressesIterator = DATA.getAddressesIterator();
+        short THREAD_POOL_SIZE = 20;
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        Iterator<String> destAddressesIterator = EMAILS.getAddressesIterator();
 
         while (destAddressesIterator.hasNext()) {
             String destinationAddress = destAddressesIterator.next();
+
             System.out.println("\ndestination address: " + destinationAddress);
-            try {
-                MAIL_SERVER.sendEmail(destinationAddress, title, message);
-            } catch (MessagingException e) {
-                e.printStackTrace();
-            }
+            executorService.submit(new SendEmailJob(MAIL_SERVER, destinationAddress, title, message));
+//            try {
+//                MAIL_SERVER.sendEmail(destinationAddress, title, message);
+//            } catch (MessagingException ex) {
+//                ex.printStackTrace();
+//            }
         }
+        
+        executorService.shutdown();
     }
 
     private static void sendTestMessage() {
@@ -127,4 +140,5 @@ public class EmailSender {
         String message = "<html><body><h1>Testo</h1><p>provolona3</p></body></html>";
         sendMessage(title, message);
     }
+
 }
