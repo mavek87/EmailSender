@@ -1,6 +1,7 @@
 package com.matteoveroni;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
@@ -20,7 +21,7 @@ public class DAO {
     private final String csvFilePath;
 
     public DAO() {
-        this("emails.csv");
+        this("Data" + File.separator + "emails.csv");
     }
 
     public DAO(String csvFilePath) {

@@ -19,33 +19,59 @@ import javax.mail.internet.MimeMessage;
 public class MailServer {
 
     private static final String HOST_GMAIL = "smtp.gmail.com";
-    private static final String PORT_GMAIL = "587";
+    private static final short PORT_GMAIL = 587;
+    private static final String SECOND_HOST_GMAIL = "smtp.googlemail.com";
+    private static final short SECOND_PORT_GMAIL = 465;
     private static final String HOST_ARUBA = "smtps.aruba.it";
-    private static final String PORT_ARUBA = "465";
+    private static final short PORT_ARUBA = 465;
     private static final String DEFAULT_USERNAME_GMAIL = "infoeinternetstaff@gmail.com";
     private static final String DEFAULT_USERNAME_ARUBA = "matteo.veroni@pec.giuffre.it";
     private static final String DEFAULT_PASSWORD = "password";
+
     private final String username;
     private final String password;
     private final Session session;
 
+    public enum TransportProtocol {
+        SSL, TLS;
+    }
+
+    private final TransportProtocol serverTransferProtocol;
+
     public MailServer() {
-        this(DEFAULT_USERNAME_GMAIL, DEFAULT_PASSWORD);
+        this(null, DEFAULT_USERNAME_GMAIL, DEFAULT_PASSWORD);
     }
 
     public MailServer(String password) {
-        this(DEFAULT_USERNAME_GMAIL, password);
+        this(null, DEFAULT_USERNAME_GMAIL, password);
     }
 
-    public MailServer(String username, String password) {
+    public MailServer(TransportProtocol protocol, String username, String password) {
         this.username = username;
         this.password = password;
 
+        if (protocol != null) {
+            this.serverTransferProtocol = protocol;
+        } else {
+            this.serverTransferProtocol = TransportProtocol.SSL;
+        }
+
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", HOST_GMAIL);
-        props.put("mail.smtp.port", PORT_GMAIL);
+
+        switch (this.serverTransferProtocol) {
+            case SSL:
+                props.put("mail.transport.protocol", "smtp");
+                props.put("mail.smtp.ssl.enable", "true");
+                props.put("mail.smtp.host", SECOND_HOST_GMAIL);
+                props.put("mail.smtp.port", SECOND_PORT_GMAIL);
+                break;
+            case TLS:
+                props.put("mail.smtp.starttls.enable", "true");
+                props.put("mail.smtp.host", HOST_GMAIL);
+                props.put("mail.smtp.port", PORT_GMAIL);
+                break;
+        }
 
         session = Session.getInstance(props, new javax.mail.Authenticator() {
             @Override
@@ -55,12 +81,12 @@ public class MailServer {
         });
     }
 
-    public boolean isConnected() {
-        try {
-            return session.getTransport("smtp").isConnected();
-        } catch (NoSuchProviderException ex) {
-            throw new RuntimeException(ex);
-        }
+    public boolean testLogin() throws NoSuchProviderException, MessagingException {
+        Transport transport = session.getTransport("smtp");
+        transport.connect(SECOND_HOST_GMAIL, SECOND_PORT_GMAIL, username, password);
+        boolean canLogin = transport.isConnected();
+        transport.close();
+        return canLogin;
     }
 
     public void sendEmail(String destinationAddress, String title, String body) throws MessagingException {
@@ -71,6 +97,6 @@ public class MailServer {
         message.setContent(body, "text/html; charset=utf-8");
 
         Transport.send(message);
-        System.out.println("The email is being sent to " + destinationAddress);
+        System.out.println("\nThe email is being sent to: " + destinationAddress);
     }
 }

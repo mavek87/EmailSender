@@ -24,9 +24,8 @@ public class SendEmailJob implements Runnable {
     public void run() {
         try {
             mailServer.sendEmail(destinationAddress, title, message);
-        } catch (MessagingException e) {
-            e.printStackTrace();
+        } catch (MessagingException ex) {
+            System.out.println("\nError trying to send email to: " + destinationAddress + "\nDetailed error: " + ex);
         }
     }
-
 }

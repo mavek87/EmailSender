@@ -9,8 +9,6 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -54,7 +52,7 @@ public class EmailSender {
                     emailBody = readFile(emailBody, Charset.forName("UTF-8"));
                 }
             } catch (IOException ex) {
-                throw new RuntimeException("Error reading file " + ex);
+                throw new RuntimeException("Error reading email message from file " + ex);
             }
 
             if (cmd.hasOption(OPTION_ABBR_PASSWORD)) {
@@ -64,11 +62,18 @@ public class EmailSender {
                 MAIL_SERVER = new MailServer();
             }
 
-//            if (MAIL_SERVER.isConnected()) {
-            sendMessage(emailTitle, emailBody);
-//            } else {
-//                System.out.println("Authentication to SMTP server failed.");
-//            }
+            boolean canLogin = false;
+            try {
+                canLogin = MAIL_SERVER.testLogin();
+            } catch (MessagingException ex) {
+                ex.printStackTrace();
+            } finally {
+                if (canLogin) {
+                    sendMessage(emailTitle, emailBody);
+                } else {
+                    System.out.println("\nError during login. The software will be closed.");
+                }
+            }
 
         } catch (RuntimeException | ParseException ex) {
             ex.printStackTrace();
@@ -122,16 +127,9 @@ public class EmailSender {
 
         while (destAddressesIterator.hasNext()) {
             String destinationAddress = destAddressesIterator.next();
-
-            System.out.println("\ndestination address: " + destinationAddress);
             executorService.submit(new SendEmailJob(MAIL_SERVER, destinationAddress, title, message));
-//            try {
-//                MAIL_SERVER.sendEmail(destinationAddress, title, message);
-//            } catch (MessagingException ex) {
-//                ex.printStackTrace();
-//            }
         }
-        
+
         executorService.shutdown();
     }
 
